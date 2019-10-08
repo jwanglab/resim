@@ -1,8 +1,13 @@
-resim
+Resim
 -----
 An efficient and flexible simulator for high-throughput optical maps
 
 All code is distributed under the MIT license - see LICENSE.
+
+    --------*------------*---*------------*----*----
+        --------*------*---------*--------*-----*--
+      ----*--------*-------------*---*--
+                 ---------*-------**-------*-
 
 Requirements
 ------------
