@@ -2,7 +2,7 @@ resim
 -----
 An efficient and flexible simulator for high-throughput optical maps
 
-All code is distributed under the MIT license.
+All code is distributed under the MIT license - see LICENSE.
 
 Requirements
 ------------
@@ -35,6 +35,34 @@ Usage
       --stretch-std: Fragment stretch standard deviation (default: 0.033733)
       --min-frag: Minimum detectable fragment size (default: 500)
       -s, --source-output: Output the reference positions of the simulated molecules to the given file
+
+Output
+------
+
+Resim outputs simulated molecules in BNX format (https://bionanogenomics.com/wp-content/uploads/2018/04/30038-BNX-File-Format-Specification-Sheet.pdf) to standard output. In most cases, stdout should be redirected to the desired output (.bnx) file:
+
+    resim [options] > output.bnx
+
+A short runtime log and any errors are output to stderr and can also be redirected to a file if desired:
+
+    resim [options] > output.bnx 2> run.log
+
+To generate the "ground truth" of simulated molecules, include the -s flag and a file name:
+
+    resim [options] -s ground_truth.tsv > output.bnx
+
+The ground truth is output in a tab-delimited format:
+
+    ref_id	start_pos
+    19	    45090529
+    13	    128801843
+    10	    139531341
+    43	    18835145
+    13	    163174323
+    ...
+
+Where ref\_id is the source reference sequence, 0-indexed in the order they appeared in the input FASTA file and start\_pos
+is the proximal end (closer to 0) of the simulated molecule, regardless of the orientation of the simulated molecule.
 
 Example
 -------
