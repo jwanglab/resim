@@ -109,8 +109,8 @@ u32Vec* bn_map(u32Vec *positions, int start_idx, int end_idx, uint64_t start_pos
   kv_init(*modpos);
   uint32_t last = 0;
   uint32_t last_stretched = 0;
+  uint32_t val;
   for(j = start_idx; j <= end_idx; j++) {
-    uint32_t val;
     if(j < end_idx) {
       if(k < kv_size(fp_pos) && kv_A(fp_pos, k) < kv_A(*positions, j) - start_pos) {
         val = kv_A(fp_pos, k);
@@ -149,8 +149,8 @@ u32Vec* bn_map(u32Vec *positions, int start_idx, int end_idx, uint64_t start_pos
 cmap simulate_bnx(char* ref_fasta, char** motifs, size_t n_motifs, float frag_prob, float fn, float fp, float err_mean, float err_std, uint32_t resolution_min, float coverage) {
 
   float bimera_prob = 0.01;
-  float trimera_prob = 0.0001;
-  float quadramera_prob = 0.000001;
+  float trimera_prob = bimera_prob * bimera_prob;
+  float quadramera_prob = bimera_prob * bimera_prob * bimera_prob;
 
   gzFile f;
   kseq_t* seq;
@@ -234,7 +234,10 @@ cmap simulate_bnx(char* ref_fasta, char** motifs, size_t n_motifs, float frag_pr
     }
     //fprintf(stderr, "ref %u, pos %lu\n", ref_id, pos);
     ref_pos rp = {ref_id, (uint32_t)pos};
-    frag_len = log(1 - (double)rand()/(double)RAND_MAX) / log(1 - frag_prob);
+    frag_len = 0;
+    while(frag_len < resolution_min) {
+      frag_len = log(1 - (double)rand()/(double)RAND_MAX) / log(1 - frag_prob);
+    }
     //fprintf(stderr, "fragment length: %u\n", frag_len);
     if(pos + frag_len > kv_A(ref_lens, ref_id))
       frag_len = kv_A(ref_lens, ref_id) - pos;
@@ -250,10 +253,13 @@ cmap simulate_bnx(char* ref_fasta, char** motifs, size_t n_motifs, float frag_pr
     // reverse fragments randomly to represent opposite strand (labels are already strand-agnostic)
     if(rand()%2 == 0) {
       uint32_t len = kv_A(*f, kv_size(*f)-1);
-      for(i = 0; i < (kv_size(*f)-1)/2; i++) { // we leave the last label alone since it represents the molecule length
+      for(i = 0; i < (kv_size(*f)-1)/2 + (kv_size(*f)%2 == 0 ? 1 : 0); i++) { // we leave the last label alone since it represents the molecule length (DO process the middle label if there is an odd #)
         tmp = kv_A(*f, i);
         kv_A(*f, i) = len - kv_A(*f, kv_size(*f)-2-i); // the rest get reversed in order and adjusted to remain monotonically increasing
         kv_A(*f, kv_size(*f)-2-i) = len - tmp;
+      }
+      if(kv_size(*f) > 1 && kv_A(*f, kv_size(*f)-1) == kv_A(*f, kv_size(*f)-2)) { // they can be exactly the same if there was a label at 0 before reversal
+        kv_pop(*f);
       }
     }
 
@@ -278,6 +284,8 @@ cmap simulate_bnx(char* ref_fasta, char** motifs, size_t n_motifs, float frag_pr
       //fprintf(stderr, "  adding part %d to chimera\n", chimera_parts);
       // shift all of the f1 positions over to append to f0
       last = kv_A(*prev_f, kv_size(*prev_f)-1); // largest value
+      // it is also the end marker, not a real label, so remove it
+      kv_pop(*prev_f);
       for(j = 0; j < kv_size(*f); j++) {
         kv_push(uint32_t, *prev_f, kv_A(*f, j) + last);
       }
